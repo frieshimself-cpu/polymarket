@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
-import { getOracleReport } from "@/lib/engine";
+import { getPredictions } from "@/lib/predictions";
 
-// Public JSON feed of the oracle's current board — build bots on it.
-// Same cached report the page renders; at most one oracle run per window.
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
+// Headroom for the batched Claude call on a cache-miss request.
+export const maxDuration = 60;
 
 export async function GET() {
-  const report = await getOracleReport();
-  return NextResponse.json(report, {
-    headers: {
-      "cache-control": "public, s-maxage=300, stale-while-revalidate=1800",
-      "access-control-allow-origin": "*",
-    },
-  });
+  try {
+    const payload = await getPredictions();
+    return NextResponse.json(payload, {
+      headers: { "cache-control": "public, max-age=0, s-maxage=60" },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to build predictions" },
+      { status: 502 },
+    );
+  }
 }

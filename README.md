@@ -1,20 +1,30 @@
-# $PREDICTIONS — Claude picks the best Polymarket trades
+# $PREDICTIONS 🟢
 
-A live AI oracle. Every 30 minutes, Claude scans the most liquid markets on
-[Polymarket](https://polymarket.com) — prices, 24h flow, liquidity, time decay — and
-publishes its six highest-conviction trades with an entry, a calibrated confidence
-score, a thesis, and the fastest way each trade dies.
+**Claude reads the markets. You take the trade.**
 
-$PREDICTIONS is also a memecoin launching on [pump.fun](https://pump.fun). The feed
-stays free either way.
+A single-page site where Claude analyzes Polymarket's highest-volume markets and
+surfaces the ones it thinks are mispriced — ranked by edge, each with a
+plain-English rationale and a risk note. Built for the $PREDICTIONS token launch
+on pump.fun.
 
-## Stack
+## How it works
 
-- **Next.js 15** (App Router, ISR) + **Tailwind CSS** — deploys to Vercel with zero config
-- **Polymarket Gamma API** (public, no key) for live market data
-- **Claude API** (`claude-opus-4-8` by default) with structured JSON output for the signals
+1. **Scan** — the server pulls top-volume binary markets from Polymarket's public
+   [Gamma API](https://gamma-api.polymarket.com) and filters for liquidity, sane
+   prices and real time-to-resolution (max 2 markets per event so one topic can't
+   flood the board).
+2. **Analyze** — one batched Claude API call (`claude-opus-4-8`, adaptive
+   thinking, structured JSON output) estimates each market's true probability
+   from its exact resolution criteria, and PASSes when breaking news it can't
+   see should decide the market.
+3. **Rank** — edge = model probability − market probability. Picks are sorted by
+   edge × confidence and served from `/api/predictions`.
 
-## Run it
+Results are cached for 30 minutes and regenerated lazily on the next visit, so
+API spend scales with traffic (at most ~48 Claude calls/day, only if the site is
+visited around the clock).
+
+## Quickstart
 
 ```bash
 npm install
@@ -22,58 +32,54 @@ cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
-No `ANTHROPIC_API_KEY`? The site still works — it falls back to a clearly-labeled
-**QUANT MODE** (deterministic liquidity/time-decay heuristics) so the board never
-goes dark and never pretends a model said something it didn't.
+No `ANTHROPIC_API_KEY`? The board still ships full: it serves a **baked
+snapshot of genuine Claude analyses** (`src/data/snapshot.ts`), re-priced
+against live Polymarket quotes on every load — prices, edges and volumes keep
+moving, resolved markets drop off automatically, and it costs zero API spend.
+Add the key whenever you want fresh analyses; the live engine takes over
+automatically.
+
+## Configuration
+
+| What | Where |
+| --- | --- |
+| Contract address (CA), pump.fun link, socials | `src/config/site.ts` |
+| Cache TTL, markets per scan | `src/config/site.ts` |
+| API key, model override | `.env.local` / Vercel env vars (`ANTHROPIC_API_KEY`, optional `CLAUDE_MODEL`) |
+
+When the pump.fun CA is live, paste it into `contractAddress` in
+`src/config/site.ts` — the hero pill, token card and copy button all update from
+that single field.
 
 ## Deploy (Vercel)
 
-1. Import this repo at [vercel.com/new](https://vercel.com/new) — Next.js is auto-detected.
-2. Add the env vars below.
-3. Deploy. Done.
+1. Push this repo and import it at [vercel.com/new](https://vercel.com/new) —
+   Next.js is auto-detected.
+2. Add the `ANTHROPIC_API_KEY` environment variable.
+3. Ship. The `/api/predictions` route sets `maxDuration = 60` for the Claude
+   call on cache-miss requests.
 
-| Variable | Required | What it does |
-| --- | --- | --- |
-| `ANTHROPIC_API_KEY` | for Claude mode | Wakes the oracle. Without it: quant mode. |
-| `CLAUDE_MODEL` | no | Override the model (default `claude-opus-4-8`). |
-| `NEXT_PUBLIC_TOKEN_CA` | no | The pump.fun contract address. Empty → site shows "CA DROPS SOON". |
-| `NEXT_PUBLIC_PUMPFUN_URL` | no | Your pump.fun coin page. Default: pump.fun homepage. |
-| `NEXT_PUBLIC_X_URL` | no | X/Twitter link. Empty → shown as TBA. |
-| `NEXT_PUBLIC_TELEGRAM_URL` | no | Telegram link. Empty → shown as TBA. |
+**Cost note:** each refresh is one batched Opus call (~10–15K tokens total,
+≈ $0.10–0.20). With the 30-minute lazy cache that's at most ~$5–10/day under
+constant traffic — set `CLAUDE_MODEL=claude-haiku-4-5` if you'd rather trade
+pick quality for ~5× lower spend.
 
-### When the CA drops
+## Honesty notes
 
-Set `NEXT_PUBLIC_TOKEN_CA` (and `NEXT_PUBLIC_PUMPFUN_URL` to the coin page) in
-Vercel → Project → Settings → Environment Variables, then **Redeploy**. The CA box
-flips from "CA DROPS SOON" to the address with a copy button. No code changes needed
-(you can also hardcode it in `src/lib/site.ts` if you prefer).
-
-## Public API
-
-The board is open data:
-
-```
-GET /api/predictions
-```
-
-Returns the current oracle report as JSON — mode (`claude` / `quant` / `offline`),
-signals (market, side, entry price, confidence, edge, thesis, risk), and scan stats.
-CORS is open; build bots on it.
-
-## How signals are made
-
-1. **SCAN** — pull the top open markets by 24h volume from Polymarket's public Gamma
-   API; drop closed/dead books, anything priced ≲4¢ or ≳96¢, and cap two markets per
-   event so one topic can't flood the board.
-2. **THINK** — Claude weighs each price against base rates and what it verifiably
-   knows. It's instructed to never invent news and to skip markets where it has no
-   defensible edge. Output is schema-enforced JSON.
-3. **SIGNAL** — top picks render on the page and the API, cached for 30 minutes
-   (`unstable_cache` + ISR), so the oracle runs at most once per window no matter the
-   traffic.
+- The no-key snapshot contains real Claude analyses (structural reads on
+  resolution wording, deadline math, cross-market consistency) — not invented
+  numbers — and the prices shown next to them are always live.
+- If both the live engine and the snapshot fail, heuristic picks are labelled
+  as heuristics in the payload (`engine: "demo"`), in a banner, and inside
+  every rationale — they are never presented as Claude.
+- The model is prompted to stay humble about its training cutoff and to PASS on
+  news-driven markets; every pick carries a risk note.
+- The site states throughout that nothing here is financial advice and that the
+  project is not affiliated with Anthropic or Polymarket.
 
 ## Disclaimer
 
-Not financial advice. AI-generated analysis can be confidently wrong. Prediction
-markets carry real risk of loss; memecoins carry total risk of loss. Not affiliated
-with, endorsed by, or connected to Polymarket or Anthropic.
+AI-generated probability estimates for information and entertainment only — not
+financial advice. Prediction markets and memecoins (including $PREDICTIONS) are
+extremely high-risk and can go to zero. Not affiliated with Anthropic or
+Polymarket.

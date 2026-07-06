@@ -1,46 +1,42 @@
-import { SectionHeading } from "./SectionHeading";
-import { site } from "@/lib/site";
-
 const steps = [
   {
-    num: "01",
-    name: "SCAN",
-    body: "Every sync, the oracle pulls the most liquid open markets on Polymarket — live prices, 24h flow, book depth, resolution clocks — then filters out the dead and the already-decided.",
+    n: "01",
+    title: "Scan",
+    body: "Every refresh pulls Polymarket's highest-volume binary markets from the public Gamma API, filtered for liquidity, sane prices and real time-to-resolution.",
   },
   {
-    num: "02",
-    name: "THINK",
-    body: "Claude weighs each price against base rates, time decay and what it actually knows. No invented headlines: if an edge can't be defended, the market gets skipped.",
+    n: "02",
+    title: "Analyze",
+    body: "Claude reads each market's exact resolution criteria and estimates the true probability from base rates and deadline math — and passes when news it can't see should decide it.",
   },
   {
-    num: "03",
-    name: "SIGNAL",
-    body: `The ${site.signalCount} highest-conviction trades hit the board with an entry, a confidence score, a thesis, and the fastest way each one dies. Auto-refreshes every ${site.refreshMinutes} minutes.`,
+    n: "03",
+    title: "Rank",
+    body: "Edge = Claude's probability minus the market's. The biggest, highest-confidence gaps make the board, each with a plain-English rationale and a risk note.",
   },
 ];
 
-export function HowItWorks() {
+export default function HowItWorks() {
   return (
-    <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
-      <SectionHeading tag="HOW IT WORKS" title="Calibrated, not psychic." />
-      <div className="grid gap-4 md:grid-cols-3">
-        {steps.map((s) => (
-          <div key={s.num} className="border border-line bg-panel p-5">
-            <div className="font-display text-3xl font-bold text-phosphor/30">{s.num}</div>
-            <div className="mt-2 text-xs font-bold tracking-[0.3em] text-phosphor">{s.name}</div>
-            <p className="mt-3 text-sm leading-relaxed text-fog">{s.body}</p>
-          </div>
-        ))}
+    <section id="how" className="border-t border-line bg-panel/40">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          How the <span className="text-signal">engine</span> works
+        </h2>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {steps.map((s) => (
+            <div key={s.n} className="card p-6">
+              <div className="font-mono text-sm text-signal">{s.n}</div>
+              <h3 className="mt-3 text-xl font-bold">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-dim">{s.body}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-8 font-mono text-xs text-dim/70">
+          Powered by the Claude API · Market data from Polymarket&apos;s public API · Refreshes
+          every 30 minutes
+        </p>
       </div>
-      <p className="mt-6 border border-line bg-panel/60 p-4 text-xs leading-relaxed text-fog">
-        <span className="font-bold text-phosphor">OPEN FEED {"//"}</span> The board is public and
-        free, and so is the raw data — hit{" "}
-        <a href="/api/predictions" className="text-phosphor underline decoration-phosphor/40">
-          /api/predictions
-        </a>{" "}
-        for the JSON and build whatever you want on top of it. The oracle states probabilities,
-        not prophecies: every signal carries its own risk line for a reason.
-      </p>
     </section>
   );
 }

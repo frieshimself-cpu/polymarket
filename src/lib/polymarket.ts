@@ -1,108 +1,142 @@
-// Thin client for Polymarket's public Gamma API.
-// Docs: https://docs.polymarket.com — no key required for read-only market data.
+import type { MarketSnapshot } from "./types";
 
-const GAMMA = "https://gamma-api.polymarket.com";
+const GAMMA_MARKETS = "https://gamma-api.polymarket.com/markets";
 
-export interface Market {
+/** Raw Gamma API market — only the fields we read. */
+interface GammaMarket {
   id: string;
   question: string;
   slug: string;
-  eventSlug: string;
-  eventTitle: string;
-  outcomes: string[];
-  /** Implied probability per outcome, 0..1, same order as `outcomes`. */
-  prices: number[];
-  volume24h: number;
-  volumeTotal: number;
-  liquidity: number;
-  /** ISO date the market resolves by, if known. */
-  endDate: string | null;
-}
-
-interface RawMarket {
-  id?: string | number;
-  question?: string;
-  slug?: string;
-  outcomes?: string;
-  outcomePrices?: string;
+  description?: string;
+  /** JSON-encoded array, e.g. '["Yes", "No"]'. */
+  outcomes: string;
+  /** JSON-encoded array of decimal strings, e.g. '["0.62", "0.38"]'. */
+  outcomePrices: string;
   volume24hr?: number;
-  volumeNum?: number;
-  liquidityNum?: number;
+  liquidity?: string;
   endDate?: string;
-  active?: boolean;
-  closed?: boolean;
+  active: boolean;
+  closed: boolean;
   events?: { slug?: string; title?: string }[];
 }
 
-function parseMarket(raw: RawMarket): Market | null {
-  try {
-    if (!raw.question || !raw.id || raw.closed || raw.active === false) return null;
-    const outcomes: unknown = JSON.parse(raw.outcomes ?? "[]");
-    const prices: unknown = JSON.parse(raw.outcomePrices ?? "[]");
-    if (!Array.isArray(outcomes) || !Array.isArray(prices)) return null;
-    if (outcomes.length < 2 || outcomes.length !== prices.length) return null;
-    const numericPrices = prices.map(Number);
-    if (numericPrices.some((p) => !Number.isFinite(p))) return null;
+const MIN_LIQUIDITY = 10_000;
+const MIN_VOLUME_24H = 5_000;
+const MIN_HOURS_TO_RESOLUTION = 12;
+/** Skip near-settled markets — no tradable edge at 1¢ or 99¢. */
+const PRICE_FLOOR = 0.02;
+const PRICE_CEIL = 0.98;
+/** Don't let a single event (e.g. "World Cup Winner") fill the whole board. */
+const MAX_PER_EVENT = 2;
 
-    return {
-      id: String(raw.id),
-      question: raw.question,
-      slug: raw.slug ?? "",
-      eventSlug: raw.events?.[0]?.slug ?? "",
-      eventTitle: raw.events?.[0]?.title?.trim() ?? "",
-      outcomes: outcomes.map(String),
-      prices: numericPrices,
-      volume24h: Number(raw.volume24hr ?? 0),
-      volumeTotal: Number(raw.volumeNum ?? 0),
-      liquidity: Number(raw.liquidityNum ?? 0),
-      endDate: raw.endDate ?? null,
-    };
-  } catch {
-    return null;
+/**
+ * Top-volume, liquid, binary Yes/No markets from Polymarket's public Gamma
+ * API, normalized for analysis. No auth required.
+ */
+export async function fetchTopMarkets(limit: number): Promise<MarketSnapshot[]> {
+  const params = new URLSearchParams({
+    closed: "false",
+    active: "true",
+    order: "volume24hr",
+    ascending: "false",
+    limit: "75",
+  });
+  const res = await fetch(`${GAMMA_MARKETS}?${params}`, {
+    cache: "no-store",
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Polymarket Gamma API responded ${res.status}`);
+  const raw = (await res.json()) as GammaMarket[];
+
+  const now = Date.now();
+  const perEvent = new Map<string, number>();
+  const markets: MarketSnapshot[] = [];
+
+  for (const m of raw) {
+    let outcomes: unknown;
+    let prices: number[];
+    try {
+      outcomes = JSON.parse(m.outcomes);
+      prices = (JSON.parse(m.outcomePrices) as string[]).map(Number);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(outcomes) || outcomes.length !== 2 || outcomes[0] !== "Yes") continue;
+
+    const yesPrice = prices[0];
+    if (!Number.isFinite(yesPrice) || yesPrice < PRICE_FLOOR || yesPrice > PRICE_CEIL) continue;
+
+    const end = m.endDate ? Date.parse(m.endDate) : NaN;
+    if (!Number.isFinite(end) || end < now + MIN_HOURS_TO_RESOLUTION * 3_600_000) continue;
+
+    const liquidity = Number(m.liquidity ?? 0);
+    const volume24h = Number(m.volume24hr ?? 0);
+    if (liquidity < MIN_LIQUIDITY || volume24h < MIN_VOLUME_24H) continue;
+
+    const event = m.events?.[0];
+    const eventKey = event?.slug ?? m.id;
+    const seen = perEvent.get(eventKey) ?? 0;
+    if (seen >= MAX_PER_EVENT) continue;
+    perEvent.set(eventKey, seen + 1);
+
+    markets.push({
+      id: m.id,
+      question: m.question,
+      description: (m.description ?? "").replace(/\s+/g, " ").trim().slice(0, 500),
+      url: event?.slug
+        ? `https://polymarket.com/event/${event.slug}`
+        : `https://polymarket.com/market/${m.slug}`,
+      eventTitle: event?.title?.trim() || null,
+      yesPrice,
+      volume24h,
+      liquidity,
+      endDate: m.endDate as string,
+    });
+    if (markets.length >= limit) break;
   }
+
+  if (markets.length === 0) throw new Error("No eligible markets returned by Polymarket");
+  return markets;
 }
 
-/** Top open markets by 24h volume. Cached for 5 minutes via Next's fetch cache. */
-export async function fetchTopMarkets(limit = 80): Promise<Market[]> {
-  const url = `${GAMMA}/markets?closed=false&active=true&order=volume24hr&ascending=false&limit=${limit}`;
-  const res = await fetch(url, {
-    headers: { accept: "application/json" },
-    next: { revalidate: 300 },
-  });
-  if (!res.ok) throw new Error(`Gamma API ${res.status}`);
-  const raw = (await res.json()) as RawMarket[];
-  if (!Array.isArray(raw)) throw new Error("Gamma API: unexpected payload");
-  return raw.map(parseMarket).filter((m): m is Market => m !== null);
+export interface LiveQuote {
+  id: string;
+  yesPrice: number;
+  volume24h: number;
+  liquidity: number;
+  closed: boolean;
 }
 
 /**
- * Markets worth analyzing: still undecided (not parked at 0/100), alive,
- * resolving in the future — capped at 2 per event so one World Cup doesn't
- * flood the whole board.
+ * Current prices for specific markets (used to re-price the baked snapshot on
+ * every load, so the board moves with the market even without an API key).
  */
-export function selectCandidates(markets: Market[], max = 24): Market[] {
-  const now = Date.now();
-  const perEvent = new Map<string, number>();
-  const picked: Market[] = [];
+export async function fetchQuotesByIds(ids: string[]): Promise<Map<string, LiveQuote>> {
+  const params = new URLSearchParams();
+  for (const id of ids) params.append("id", id);
+  const res = await fetch(`${GAMMA_MARKETS}?${params}`, {
+    cache: "no-store",
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Polymarket Gamma API responded ${res.status}`);
+  const raw = (await res.json()) as GammaMarket[];
 
-  for (const m of markets) {
-    if (picked.length >= max) break;
-    const lead = m.prices[0];
-    if (lead < 0.04 || lead > 0.96) continue;
-    if (m.volume24h < 5_000) continue;
-    if (m.endDate && new Date(m.endDate).getTime() < now) continue;
-
-    const key = m.eventSlug || m.id;
-    const count = perEvent.get(key) ?? 0;
-    if (count >= 2) continue;
-    perEvent.set(key, count + 1);
-    picked.push(m);
+  const quotes = new Map<string, LiveQuote>();
+  for (const m of raw) {
+    let yesPrice: number;
+    try {
+      yesPrice = Number((JSON.parse(m.outcomePrices) as string[])[0]);
+    } catch {
+      continue;
+    }
+    if (!Number.isFinite(yesPrice)) continue;
+    quotes.set(m.id, {
+      id: m.id,
+      yesPrice,
+      volume24h: Number(m.volume24hr ?? 0),
+      liquidity: Number(m.liquidity ?? 0),
+      closed: m.closed || !m.active,
+    });
   }
-  return picked;
-}
-
-export function marketUrl(m: Market): string {
-  if (m.eventSlug) return `https://polymarket.com/event/${m.eventSlug}`;
-  if (m.slug) return `https://polymarket.com/market/${m.slug}`;
-  return "https://polymarket.com";
+  return quotes;
 }

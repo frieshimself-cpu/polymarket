@@ -1,8 +1,8 @@
 {
-  "name": "predictions-oracle",
+  "name": "predictions",
   "version": "1.0.0",
   "private": true,
-  "description": "$PREDICTIONS — Claude picks the best Polymarket trades. Live AI signal feed.",
+  "description": "$PREDICTIONS — a Claude-powered Polymarket edge finder",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,17 +10,16 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
-    "next": "^15.5.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "next": "^15.5.19",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^22.10.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.19",
-    "typescript": "^5.7.0"
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.7.3"
   }
 }
