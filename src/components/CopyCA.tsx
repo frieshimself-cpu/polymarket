@@ -11,7 +11,7 @@ export default function CopyCA() {
     return (
       <div className="inline-flex items-center gap-3 rounded-xl border border-dashed border-line bg-panel px-4 py-2.5 font-mono text-sm">
         <span className="text-dim">CA:</span>
-        <span className="text-amber">TBA — dropping soon</span>
+        <span className="text-amber">coming soon</span>
       </div>
     );
   }

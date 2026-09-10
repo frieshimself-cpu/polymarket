@@ -10,7 +10,7 @@ export const site = {
     "An AI analyst scanning Polymarket around the clock for mispriced odds — picks ranked by edge and explained in plain English. Not financial advice.",
 
   // ── Token ──────────────────────────────────────────────────────────────
-  contractAddress: "35eWMDRdd8z7JuazXrPzSc9kCci59nHVxUtp9q2ipump",
+  contractAddress: "", // empty → the site shows "coming soon" in place of the CA
 
   // ── Socials (empty = hidden) ───────────────────────────────────────────
   twitterUrl: "",
