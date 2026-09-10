@@ -1,7 +1,6 @@
 /**
- * One-stop config for everything launch-related.
- * When the pump.fun CA is live, paste it into `contractAddress` (and set
- * `pumpFunUrl` to the coin page) — the whole site updates from here.
+ * One-stop config for the site. The contract address shows in the token
+ * section; socials appear once their URLs are set.
  */
 export const site = {
   name: "$PREDICTIONS",
@@ -12,7 +11,6 @@ export const site = {
 
   // ── Token ──────────────────────────────────────────────────────────────
   contractAddress: "35eWMDRdd8z7JuazXrPzSc9kCci59nHVxUtp9q2ipump",
-  pumpFunUrl: "https://pump.fun/coin/35eWMDRdd8z7JuazXrPzSc9kCci59nHVxUtp9q2ipump",
 
   // ── Socials (empty = hidden) ───────────────────────────────────────────
   twitterUrl: "",

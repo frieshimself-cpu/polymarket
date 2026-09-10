@@ -11,7 +11,7 @@ export default function Hero() {
         <div className="animate-rise">
           <div className="chip inline-flex items-center gap-2 border-signal/40 text-signal">
             <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-signal" />
-            LIVE ON POLYMARKET DATA · TOKEN ON PUMP.FUN
+            LIVE ON POLYMARKET DATA · REFRESHED EVERY 30 MIN
           </div>
 
           <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
@@ -33,12 +33,10 @@ export default function Hero() {
               View today&apos;s picks
             </a>
             <a
-              href={site.pumpFunUrl || "https://pump.fun"}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#how"
               className="rounded-full border border-line px-6 py-3 font-bold text-ink transition-colors hover:border-signal/50 hover:text-signal"
             >
-              Buy on pump.fun ↗
+              How it works
             </a>
           </div>
 

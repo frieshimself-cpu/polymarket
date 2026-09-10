@@ -30,7 +30,7 @@ export default function OpenGraphImage() {
           Claude reads the markets. You take the trade.
         </div>
         <div style={{ display: "flex", fontSize: 22, color: "#00ff9d", marginTop: 40 }}>
-          AI-ranked Polymarket edges · token on pump.fun · not financial advice
+          AI-ranked Polymarket edges · refreshed every 30 min · not financial advice
         </div>
       </div>
     ),

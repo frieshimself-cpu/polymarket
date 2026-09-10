@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     q: "What is the $PREDICTIONS token for?",
-    a: "It's the community memecoin around the project, launched on pump.fun. It grants no rights, no yield and no access — the board is free for everyone. If you buy it, you're buying a meme.",
+    a: "It's the community memecoin around the project. It grants no rights, no yield and no access — the board is free for everyone. If you hold it, you're holding a meme.",
   },
   {
     q: "Where do I find the contract address?",
-    a: "Only on this site and our official socials once the pump.fun launch goes live. Anything posted before we announce it is a scam — copycat tokens always front-run launches like this.",
+    a: "The official contract address is shown in the token section of this site. Treat any address posted anywhere else as a scam until you've matched it against the one here — copycat tokens are common.",
   },
   {
     q: "Is this affiliated with Anthropic or Polymarket?",

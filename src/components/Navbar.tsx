@@ -1,5 +1,3 @@
-import { site } from "@/config/site";
-
 const links = [
   { href: "#picks", label: "Picks" },
   { href: "#how", label: "How it works" },
@@ -27,12 +25,10 @@ export default function Navbar() {
         </div>
 
         <a
-          href={site.pumpFunUrl || "https://pump.fun"}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="#picks"
           className="rounded-full bg-signal px-4 py-2 text-sm font-bold text-[#04130c] transition-transform hover:scale-105"
         >
-          Buy {site.name}
+          View picks
         </a>
       </nav>
     </header>
