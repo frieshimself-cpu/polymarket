@@ -27,8 +27,8 @@ export default function TokenSection() {
                 for everyone
               </li>
               <li className="flex gap-3">
-                <span className="text-signal">▸</span> The only official contract address is the
-                one on this page — always verify before you trust it
+                <span className="text-signal">▸</span> The contract address drops here first — when
+                it&apos;s live, trust only the address on this page
               </li>
             </ul>
           </div>

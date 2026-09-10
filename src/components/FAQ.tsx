@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "Where do I find the contract address?",
-    a: "The official contract address is shown in the token section of this site. Treat any address posted anywhere else as a scam until you've matched it against the one here — copycat tokens are common.",
+    a: "It isn't live yet — the token section shows \"coming soon\" for now, and the official address will be posted there the moment it launches. Treat any address posted anywhere before then as a scam; copycat tokens are common.",
   },
   {
     q: "Is this affiliated with Anthropic or Polymarket?",
